@@ -43,8 +43,13 @@ next-env.d.ts
 # 에디터·도구 로컬 설정 (개인 경로나 토큰이 들어갈 수 있음)
 .vscode/
 .idea/
-.claude/
 *.code-workspace
+
+# .claude/settings.json은 공유 설정이라 커밋한다.
+# 개인 환경에만 해당하는 local 계열만 제외한다.
+.claude/settings.local.json
+.claude/*.local.json
+.claude/tmp*/
 
 # 패키지 레지스트리 인증
 .npmrc
