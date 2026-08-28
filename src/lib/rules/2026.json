@@ -1,0 +1,103 @@
+{
+  "year": 2026,
+  "unit": "KRW",
+  "_doc": "근거: docs/tax-rules-2026.md. 세율은 별도 표기가 없으면 지방소득세 포함(=원천징수세율).",
+
+  "pensionIncomeWithholding": {
+    "_ref": "§5.1 / 소득세법 §129①5의2",
+    "_note": "소득세율 5%/4%/3% + 개인지방소득세 10% = 원천징수세율",
+    "byAgeDesc": [
+      { "minAge": 80, "rate": 0.033 },
+      { "minAge": 70, "rate": 0.044 },
+      { "minAge": 55, "rate": 0.055 }
+    ],
+    "lifetimeAnnuity": {
+      "_note": "2026.1.1. 시행으로 4% → 3% 인하 (소득세법 §129①5의2 다목). 각 목 동시 충족 시 낮은 세율 적용",
+      "minAge": 55,
+      "rate": 0.033
+    }
+  },
+
+  "deferredSeverance": {
+    "_ref": "§5.2",
+    "payRateByYearIndex": [
+      { "upToYearIndex": 10, "payRate": 0.70 },
+      { "upToYearIndex": 20, "payRate": 0.60 },
+      { "upToYearIndex": null, "payRate": 0.50 }
+    ]
+  },
+
+  "withdrawalLimit": {
+    "_ref": "§4",
+    "denominatorBase": 11,
+    "multiplier": 1.2,
+    "unlimitedFromYearIndex": 11
+  },
+
+  "separateTaxation": {
+    "_ref": "§5.3",
+    "annualCap": 15000000,
+    "overCapFlatRate": 0.165
+  },
+
+  "nonPensionWithdrawal": {
+    "_ref": "§5.4",
+    "_verify": true,
+    "taxFreeRate": 0,
+    "taxableRate": 0.165,
+    "deferredSeverancePayRate": 1.0
+  },
+
+  "severanceTax": {
+    "_ref": "§6",
+    "serviceYearDeduction": [
+      { "upToYears": 5,    "base": 0,        "fromYear": 0,  "perYear": 1000000 },
+      { "upToYears": 10,   "base": 5000000,  "fromYear": 5,  "perYear": 2000000 },
+      { "upToYears": 20,   "base": 15000000, "fromYear": 10, "perYear": 2500000 },
+      { "upToYears": null, "base": 40000000, "fromYear": 20, "perYear": 3000000 }
+    ],
+    "convertedIncomeDeduction": [
+      { "upTo": 8000000,   "base": 0,         "from": 0,         "rate": 1.00 },
+      { "upTo": 70000000,  "base": 8000000,   "from": 8000000,   "rate": 0.60 },
+      { "upTo": 100000000, "base": 45200000,  "from": 70000000,  "rate": 0.55 },
+      { "upTo": 300000000, "base": 61700000,  "from": 100000000, "rate": 0.45 },
+      { "upTo": null,      "base": 151700000, "from": 300000000, "rate": 0.35 }
+    ],
+    "baseRates": [
+      { "upTo": 14000000,   "rate": 0.06, "progressiveDeduction": 0 },
+      { "upTo": 50000000,   "rate": 0.15, "progressiveDeduction": 1260000 },
+      { "upTo": 88000000,   "rate": 0.24, "progressiveDeduction": 5760000 },
+      { "upTo": 150000000,  "rate": 0.35, "progressiveDeduction": 15440000 },
+      { "upTo": 300000000,  "rate": 0.38, "progressiveDeduction": 19940000 },
+      { "upTo": 500000000,  "rate": 0.40, "progressiveDeduction": 25940000 },
+      { "upTo": 1000000000, "rate": 0.42, "progressiveDeduction": 35940000 },
+      { "upTo": null,       "rate": 0.45, "progressiveDeduction": 65940000 }
+    ]
+  },
+
+  "pensionIncomeDeduction": {
+    "_ref": "§5.3(a) 종합과세 계산용",
+    "_verify": true,
+    "brackets": [
+      { "upTo": 3500000,  "base": 0,       "from": 0,        "rate": 1.0 },
+      { "upTo": 7000000,  "base": 3500000, "from": 3500000,  "rate": 0.4 },
+      { "upTo": 14000000, "base": 4900000, "from": 7000000,  "rate": 0.2 },
+      { "upTo": null,     "base": 6300000, "from": 14000000, "rate": 0.1 }
+    ],
+    "cap": 9000000
+  },
+
+  "localIncomeTaxSurcharge": 0.1,
+
+  "healthInsurance": {
+    "_ref": "§7",
+    "_verify": true,
+    "privatePensionCounted": false,
+    "dependent": {
+      "annualIncomeLimit": 20000000,
+      "propertyTaxBaseSafe": 540000000,
+      "propertyTaxBaseHard": 900000000,
+      "propertyMidIncomeLimit": 10000000
+    }
+  }
+}
