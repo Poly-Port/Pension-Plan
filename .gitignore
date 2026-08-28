@@ -39,3 +39,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 에디터·도구 로컬 설정 (개인 경로나 토큰이 들어갈 수 있음)
+.vscode/
+.idea/
+.claude/
+*.code-workspace
+
+# 패키지 레지스트리 인증
+.npmrc
+.yarnrc.yml
+
+# 자격 증명·키 (실수 방지용 광범위 차단)
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+secrets/
+credentials*.json
+serviceAccount*.json
+
+# 로컬 전용 파일
+*.local
+!*.local.example

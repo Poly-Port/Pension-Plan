@@ -1,0 +1,107 @@
+#!/bin/sh
+#
+# 커밋 직전에 스테이징된 내용을 검사해 시크릿 유출을 막는다.
+# 이 저장소는 GitHub에 공개되므로, 한 번 push된 시크릿은 즉시 폐기해야 하는 상태가 된다.
+#
+# 활성화 (클론 후 1회):
+#   git config core.hooksPath .githooks
+#
+# 검사를 건너뛰어야 할 때 (오탐일 때만):
+#   git commit --no-verify
+
+RED=''
+YELLOW=''
+RESET=''
+if [ -t 1 ]; then
+  RED=$(printf '\033[31m'); YELLOW=$(printf '\033[33m'); RESET=$(printf '\033[0m')
+fi
+
+fail=0
+
+report() {
+  if [ "$fail" -eq 0 ]; then
+    printf '%s커밋을 중단했습니다. 시크릿으로 의심되는 내용이 있습니다.%s\n\n' "$RED" "$RESET"
+  fi
+  fail=1
+  printf '  %s\n' "$1"
+}
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+# ---------------------------------------------------------------------------
+# 1. 파일명 자체가 위험한 경우
+# ---------------------------------------------------------------------------
+for f in $staged; do
+  case "$f" in
+    *.pem|*.key|*.p12|*.pfx|*.jks|*.keystore|*id_rsa*|*id_ed25519*|.npmrc|*serviceAccount*.json|*credentials*.json)
+      report "위험한 파일이 스테이징됨: $f"
+      ;;
+  esac
+  # .env 계열. .env.example 류는 허용한다.
+  case "$f" in
+    *.env|.env.*|*/.env|*/.env.*)
+      case "$f" in
+        *.example|*.sample|*.template) ;;
+        *) report ".env 파일이 스테이징됨: $f" ;;
+      esac
+      ;;
+  esac
+done
+
+# ---------------------------------------------------------------------------
+# 2. 스테이징된 "추가된 줄"에서 시크릿 패턴 검사
+#    (기존 줄은 검사하지 않으므로 문서에 예시가 있어도 재차 걸리지 않는다)
+# ---------------------------------------------------------------------------
+added=$(git diff --cached -U0 | grep '^+' | grep -v '^+++')
+[ -z "$added" ] && { [ "$fail" -eq 1 ] && exit 1; exit 0; }
+
+check() {
+  # $1 = 정규식, $2 = 설명
+  hits=$(printf '%s\n' "$added" | grep -nE "$1" | head -3)
+  if [ -n "$hits" ]; then
+    report "$2"
+    printf '%s\n' "$hits" | sed 's/^/      /'
+  fi
+}
+
+check 'sk-ant-[A-Za-z0-9_-]{20,}'                       'Anthropic(Claude) API 키'
+check 'sk-(proj-)?[A-Za-z0-9]{32,}'                     'OpenAI API 키'
+check '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}'          'GitHub 개인 액세스 토큰'
+check 'github_pat_[A-Za-z0-9_]{50,}'                    'GitHub 세분화 토큰'
+check 'AKIA[0-9A-Z]{16}'                                'AWS 액세스 키 ID'
+check 'xox[baprs]-[A-Za-z0-9-]{10,}'                    'Slack 토큰'
+check 'AIza[A-Za-z0-9_-]{30,}'                          'Google API 키'
+check '\-\-\-\-\-BEGIN [A-Z ]*PRIVATE KEY\-\-\-\-\-'    '개인키(PEM)'
+check 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.'  'JWT 토큰'
+check '(postgres|postgresql|mysql|mongodb(\+srv)?)://[^:/@[:space:]]+:[^@[:space:]]+@' 'DB 접속 문자열(비밀번호 포함)'
+
+# 하드코딩된 비밀값. 빈 문자열이나 자리표시자는 통과시킨다.
+suspicious=$(printf '%s\n' "$added" \
+  | grep -inE '(password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|private[_-]?key)[[:space:]]*[:=][[:space:]]*["'\''][^"'\'']{8,}["'\'']' \
+  | grep -viE '(process\.env|import\.meta\.env|<[^>]+>|xxx+|your[_-]|example|placeholder|dummy|changeme|todo|\*\*\*)' \
+  | head -3)
+if [ -n "$suspicious" ]; then
+  report '하드코딩된 비밀값으로 보이는 줄'
+  printf '%s\n' "$suspicious" | sed 's/^/      /'
+fi
+
+# ---------------------------------------------------------------------------
+# 3. Next.js 특유의 함정: NEXT_PUBLIC_ 접두사는 브라우저 번들에 그대로 노출된다
+# ---------------------------------------------------------------------------
+nextpublic=$(printf '%s\n' "$added" \
+  | grep -inE 'NEXT_PUBLIC_[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL)' | head -3)
+if [ -n "$nextpublic" ]; then
+  report 'NEXT_PUBLIC_ 환경변수에 비밀값 이름이 붙어 있음 (브라우저에 그대로 노출됩니다)'
+  printf '%s\n' "$nextpublic" | sed 's/^/      /'
+fi
+
+if [ "$fail" -eq 1 ]; then
+  printf '\n%s대응 순서%s\n' "$YELLOW" "$RESET"
+  printf '  1. 실제 시크릿이면 %s먼저 발급처에서 폐기(rotate)%s 하세요. 커밋을 지우는 것보다 우선입니다.\n' "$RED" "$RESET"
+  printf '  2. 값을 .env.local 로 옮기고 코드에서는 process.env 로 읽으세요.\n'
+  printf '  3. 오탐이면: git commit --no-verify\n\n'
+  exit 1
+fi
+
+exit 0

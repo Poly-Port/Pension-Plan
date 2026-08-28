@@ -67,6 +67,7 @@ scripts/
 
 ```bash
 npm install
+git config core.hooksPath .githooks   # 시크릿 커밋 방지 훅 활성화 (1회)
 npm run dev      # http://localhost:3000
 npm test         # 계산 엔진 테스트
 npm run build    # 프로덕션 빌드
